@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Predictor de Hipotensión Intradialítica — DIALYSIS-DATA</title>
+<style>
+  :root {
+    --blue-50: #E6F1FB; --blue-200: #85B7EB; --blue-600: #185FA5; --blue-800: #0C447C;
+    --red-50: #FCEBEB; --red-600: #A32D2D; --red-400: #E24B4A;
+    --amber-50: #FAEEDA; --amber-600: #854F0B; --amber-400: #EF9F27;
+    --green-50: #EAF3DE; --green-600: #3B6D11; --green-400: #639922;
+    --gray-50: #F1EFE8; --gray-100: #D3D1C7; --gray-400: #888780; --gray-800: #444441;
+    --text-primary: #1a1a18;
+    --text-secondary: #5F5E5A;
+    --text-tertiary: #888780;
+    --bg-primary: #ffffff;
+    --bg-secondary: #F7F6F2;
+    --bg-page: #F1EFE8;
+    --border: rgba(0,0,0,0.12);
+    --border-md: rgba(0,0,0,0.22);
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg-page);
+    color: var(--text-primary);
+    min-height: 100vh;
+    padding: 2rem 1rem;
+  }
+
+  .container {
+    max-width: 640px;
+    margin: 0 auto;
+  }
+
+  /* Header */
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1.75rem;
+  }
+  .brand-dot {
+    width: 32px; height: 32px;
+    background: var(--blue-600);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .brand-dot svg { width: 18px; height: 18px; fill: white; }
+  .brand-name { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+  .brand-sub  { font-size: 12px; color: var(--text-tertiary); }
+
+  h1 {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 6px;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 1.75rem;
+    line-height: 1.5;
+  }
+
+  /* Card */
+  .card {
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-xl);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-tertiary);
+    margin-bottom: 14px;
+  }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; color: var(--text-secondary); }
+  .field input {
+    height: 38px;
+    padding: 0 12px;
+    border: 0.5px solid var(--border-md);
+    border-radius: var(--radius-md);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: var(--font);
+    width: 100%;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--blue-600);
+    background: var(--bg-primary);
+    box-shadow: 0 0 0 3px rgba(24,95,165,0.12);
+  }
+  .field input::placeholder { color: var(--text-tertiary); }
+  .unit { font-size: 11px; color: var(--text-tertiary); display: inline; }
+
+  .divider { height: 0.5px; background: var(--border); margin: 1.25rem 0; }
+
+  /* Button */
+  .btn-calc {
+    width: 100%;
+    height: 46px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: var(--blue-600);
+    color: var(--blue-50);
+    font-size: 15px;
+    font-weight: 500;
+    font-family: var(--font);
+    cursor: pointer;
+    margin-top: 1.25rem;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .btn-calc:hover { background: var(--blue-800); }
+  .btn-calc:active { transform: scale(0.99); }
+
+  /* Result */
+  .result-card {
+    background: var(--bg-primary);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    display: none;
+    margin-bottom: 1rem;
+  }
+
+  .result-header {
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .semaforo-circle {
+    width: 52px; height: 52px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+  }
+
+  .nivel-text { font-size: 24px; font-weight: 500; }
+  .nivel-sub  { font-size: 13px; color: var(--text-secondary); margin-top: 3px; }
+
+  .risk-alto  .semaforo-circle { background: var(--red-50); }
+  .risk-medio .semaforo-circle { background: var(--amber-50); }
+  .risk-bajo  .semaforo-circle { background: var(--green-50); }
+  .risk-alto  .nivel-text { color: var(--red-600); }
+  .risk-medio .nivel-text { color: var(--amber-600); }
+  .risk-bajo  .nivel-text { color: var(--green-600); }
+
+  .prob-section { padding: 0 1.5rem 1rem; }
+  .prob-row { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+  .prob-track { height: 8px; background: var(--bg-secondary); border-radius: 4px; overflow: hidden; }
+  .prob-fill   { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+
+  .metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 0 1.5rem 1rem;
+  }
+  .metric-tile {
+    background: var(--bg-secondary);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+  }
+  .metric-val  { font-size: 22px; font-weight: 500; color: var(--text-primary); }
+  .metric-name { font-size: 11px; color: var(--text-secondary); margin-top: 3px; }
+
+  .alert-kdoqi {
+    margin: 0 1.5rem 1rem;
+    padding: 10px 14px;
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    background: var(--amber-50);
+    color: var(--amber-600);
+    display: none;
+    line-height: 1.5;
+  }
+
+  .action-box {
+    margin: 0 1.5rem 1.5rem;
+    padding: 14px 16px;
+    border-radius: var(--radius-md);
+    border: 0.5px solid var(--border);
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+  }
+  .action-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 6px;
+  }
+
+  /* Footer */
+  .disclaimer {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    line-height: 1.6;
+    text-align: center;
+    padding: 0 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .footer-brand {
+    text-align: center;
+    font-size: 12px;
+    color: var(--text-tertiary);
+    border-top: 0.5px solid var(--border);
+    padding-top: 1.25rem;
+    margin-top: 0.5rem;
+  }
+  .footer-brand a { color: var(--blue-600); text-decoration: none; }
+
+  /* Error */
+  .field input.error { border-color: var(--red-400); }
+
+  @media (max-width: 480px) {
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+    h1 { font-size: 19px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="brand">
+    <div class="brand-dot">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5S10.62 6.5 12 6.5 14.5 7.62 14.5 9 13.38 11.5 12 11.5z"/>
+      </svg>
+    </div>
+    <div>
+      <div class="brand-name">DIALYSIS-DATA Consulting</div>
+      <div class="brand-sub">Ciudad de México · dialysis.data.consulting@gmail.com</div>
+    </div>
+  </div>
+
+  <h1>Predictor de hipotensión intradialítica</h1>
+  <p class="subtitle">
+    Regresión logística · AUC 0.714 · 12,404 sesiones · Dataset MIMIC<br>
+    Ingresa los datos de la sesión para obtener el nivel de riesgo y recomendación clínica.
+  </p>
+
+  <div class="card">
+    <div class="section-label">Datos del paciente</div>
+    <div class="grid-2">
+      <div class="field">
+        <label>Edad <span class="unit">(años)</span></label>
+        <input type="number" id="edad" placeholder="68" min="18" max="95">
+      </div>
+      <div class="field">
+        <label>Peso predialítico <span class="unit">(kg)</span></label>
+        <input type="number" id="peso_pre" placeholder="75.0" step="0.1">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label>Peso postdialítico <span class="unit">(kg)</span></label>
+        <input type="number" id="peso_post" placeholder="72.5" step="0.1">
+      </div>
+      <div class="field">
+        <label>UF programada <span class="unit">(L)</span></label>
+        <input type="number" id="uf" placeholder="2.5" step="0.1">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label>TAS basal <span class="unit">(mmHg)</span></label>
+        <input type="number" id="tas" placeholder="145">
+      </div>
+      <div class="field">
+        <label>TAD basal <span class="unit">(mmHg)</span></label>
+        <input type="number" id="tad" placeholder="85">
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="section-label">Parámetros de máquina</div>
+
+    <div class="grid-3">
+      <div class="field">
+        <label>Presión arterial <span class="unit">(mmHg)</span></label>
+        <input type="number" id="p_art" placeholder="120">
+      </div>
+      <div class="field">
+        <label>Presión venosa <span class="unit">(mmHg)</span></label>
+        <input type="number" id="p_ven" placeholder="180">
+      </div>
+      <div class="field">
+        <label>PTM <span class="unit">(mmHg)</span></label>
+        <input type="number" id="ptm" placeholder="25">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label>Flujo sanguíneo <span class="unit">(ml/min)</span></label>
+        <input type="number" id="flujo" placeholder="350">
+      </div>
+    </div>
+
+    <button class="btn-calc" onclick="calcular()">Calcular riesgo</button>
+  </div>
+
+  <!-- Result -->
+  <div class="result-card" id="result-card">
+    <div class="result-header" id="result-header">
+      <div class="semaforo-circle" id="semaforo">●</div>
+      <div>
+        <div class="nivel-text" id="nivel-text">—</div>
+        <div class="nivel-sub"  id="nivel-sub">—</div>
+      </div>
+    </div>
+
+    <div class="prob-section">
+      <div class="prob-row">
+        <span>Probabilidad de hipotensión</span>
+        <span id="prob-pct" style="font-weight:500;">—</span>
+      </div>
+      <div class="prob-track">
+        <div class="prob-fill" id="prob-fill" style="width:0%;"></div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metric-tile">
+        <div class="metric-val" id="m-uf">—</div>
+        <div class="metric-name">UF ml/kg/h</div>
+      </div>
+      <div class="metric-tile">
+        <div class="metric-val" id="m-stress">—</div>
+        <div class="metric-name">Estrés hemodinámico</div>
+      </div>
+    </div>
+
+    <div class="alert-kdoqi" id="alert-kdoqi">
+      ⚠ Tasa de UF supera umbral KDOQI (&gt;13 ml/kg/h). Riesgo incrementado independientemente del score del modelo.
+    </div>
+
+    <div class="action-box">
+      <div class="action-title" id="action-title">—</div>
+      <div id="action-text">—</div>
+    </div>
+  </div>
+
+  <p class="disclaimer">
+    Modelo entrenado en dataset MIMIC (EE.UU.) de uso libre para investigación (PhysioNet).<br>
+    Tiempo de sesión fijo en 3 horas — válido para unidades ambulatorias de CDMX.<br>
+    Para uso orientativo. No reemplaza el juicio clínico. Requiere validación prospectiva en población mexicana.
+  </p>
+
+  <div class="footer-brand">
+    © 2026 DIALYSIS-DATA Consulting ·
+    <a href="mailto:dialysis.data.consulting@gmail.com">dialysis.data.consulting@gmail.com</a>
+  </div>
+
+</div>
+
+<script>
+const INTERCEPT = -1.597073;
+const COEFS = {
+  edad:              0.120155,
+  peso_pre:          0.189445,
+  D_TAS:             0.581055,
+  D_TAD:            -0.032964,
+  D_PresionArterial: 0.054678,
+  D_PresionVenosa:   0.168761,
+  D_PTM:            -0.185638,
+  D_FlujoSangre:    -0.327361,
+  D_UF:              0.296322,
+  uf_ml_kg_h:       -0.362914,
+  delta_presion:     0.298492,
+  stress_hemodinamico: 0.397466
+};
+const MEANS = {
+  edad:66.23, peso_pre:72.49, D_TAS:130.65, D_TAD:61.26,
+  D_PresionArterial:90, D_PresionVenosa:150, D_PTM:20,
+  D_FlujoSangre:381, D_UF:0.14, uf_ml_kg_h:3.2,
+  delta_presion:40, stress_hemodinamico:0.025
+};
+const STDS = {
+  edad:15.27, peso_pre:15.11, D_TAS:29.20, D_TAD:18.61,
+  D_PresionArterial:25, D_PresionVenosa:40, D_PTM:15,
+  D_FlujoSangre:51.38, D_UF:0.08, uf_ml_kg_h:2.5,
+  delta_presion:30, stress_hemodinamico:0.02
+};
+
+const CAMPOS = ['edad','peso_pre','peso_post','tas','tad','uf','p_art','p_ven','ptm','flujo'];
+
+function get(id){ return parseFloat(document.getElementById(id).value); }
+function sigmoid(x){ return 1 / (1 + Math.exp(-x)); }
+
+function calcular(){
+  let valido = true;
+  CAMPOS.forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.remove('error');
+    if(isNaN(parseFloat(el.value))){ el.classList.add('error'); valido = false; }
+  });
+  if(!valido){ return; }
+
+  const edad=get('edad'), peso_pre=get('peso_pre'), peso_post=get('peso_post');
+  const tas=get('tas'), tad=get('tad'), uf=get('uf');
+  const p_art=get('p_art'), p_ven=get('p_ven'), ptm=get('ptm'), flujo=get('flujo');
+
+  const uf_total     = peso_pre - peso_post;
+  const uf_ml_kg_h   = (uf_total * 1000) / (peso_pre * 3);
+  const delta        = tas - p_art;
+  const stress       = uf_ml_kg_h / tas;
+
+  const vals = {
+    edad, peso_pre, D_TAS:tas, D_TAD:tad,
+    D_PresionArterial:p_art, D_PresionVenosa:p_ven, D_PTM:ptm,
+    D_FlujoSangre:flujo, D_UF:uf,
+    uf_ml_kg_h, delta_presion:delta, stress_hemodinamico:stress
+  };
+
+  let logit = INTERCEPT;
+  for(const [k,v] of Object.entries(vals)){
+    logit += COEFS[k] * ((v - MEANS[k]) / STDS[k]);
+  }
+
+  const prob = sigmoid(logit);
+  const pct  = Math.round(prob * 100);
+
+  let nivel, sub, actionTitle, actionText, barColor, bgClass;
+
+  if(prob > 0.20){
+    nivel='ALTO'; barColor='#E24B4A'; bgClass='risk-alto';
+    sub='Intervención preventiva recomendada';
+    actionTitle='Acciones recomendadas';
+    actionText='Revisar ganancia de peso interdialítica. Valorar reducción de tasa de UF. Monitoreo tensional cada 15 min. Considerar temperatura de baño 35–36°C. Tener solución salina 0.9% disponible.';
+  } else if(prob > 0.14){
+    nivel='MEDIO'; barColor='#EF9F27'; bgClass='risk-medio';
+    sub='Monitoreo frecuente';
+    actionTitle='Observación reforzada';
+    actionText='Control tensional cada 30 min. Verificar tasa de UF programada. Evaluar síntomas: náusea, calambres, mareo. Solución salina disponible.';
+  } else {
+    nivel='BAJO'; barColor='#639922'; bgClass='risk-bajo';
+    sub='Seguimiento estándar de sesión';
+    actionTitle='Protocolo habitual';
+    actionText='Control tensional cada 60 min según protocolo de la unidad. Continuar sesión según parámetros programados.';
+  }
+
+  const card = document.getElementById('result-card');
+  card.style.display = 'block';
+  card.className = 'result-card ' + bgClass;
+
+  document.getElementById('semaforo').textContent  = '●';
+  document.getElementById('nivel-text').textContent = nivel;
+  document.getElementById('nivel-sub').textContent  = sub;
+  document.getElementById('prob-pct').textContent   = pct + '%';
+  document.getElementById('prob-fill').style.width  = Math.min(pct,100) + '%';
+  document.getElementById('prob-fill').style.background = barColor;
+  document.getElementById('m-uf').textContent       = uf_ml_kg_h.toFixed(1);
+  document.getElementById('m-stress').textContent   = stress.toFixed(4);
+  document.getElementById('action-title').textContent = actionTitle;
+  document.getElementById('action-text').textContent  = actionText;
+
+  const alerta = document.getElementById('alert-kdoqi');
+  alerta.style.display = uf_ml_kg_h > 13 ? 'block' : 'none';
+
+  card.scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+document.querySelectorAll('input').forEach(inp => {
+  inp.addEventListener('keydown', e => { if(e.key==='Enter') calcular(); });
+  inp.addEventListener('input',   () => inp.classList.remove('error'));
+});
+</script>
+</body>
+</html>
